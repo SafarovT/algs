@@ -1,0 +1,39 @@
+RECORD 
+TEXT: STRING;  
+NUMBER: INTEGER;
+OBJECT: RECORD
+TEXT1: STRING;
+END 
+
+END
+      
+BEGIN
+  
+IF
+BEGINEND 
+THEN
+BEGIN END 
+ELSE
+
+
+
+  REPEAT
+    IF
+    THEN
+	IF 
+        THEN
+             REPEAT UNTIL
+        ELSE
+          REPEAT UNTIL
+    ELSE
+      REPEAT UNTIL
+      
+  IF
+  THEN
+        BEGIN BEGIN END BEGIN END BEGIN END
+        END
+      ELSE
+        BEGIN END
+UNTIL
+END
+ENDD
