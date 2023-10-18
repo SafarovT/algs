@@ -4,6 +4,7 @@
 #include <string>
 #include <stdexcept>
 #include <algorithm>
+#include <stack>
 
 class CFileTree
 {
@@ -125,6 +126,10 @@ public:
 
 	void PasteItem()
 	{
+		if (m_bufferNode == nullptr)
+		{
+			return;
+		}
 		if (m_isCutMode)
 		{
 			PasteAfterCut();
@@ -204,23 +209,43 @@ private:
 
 	void PasteAfterCopy()
 	{
-		// Обход сверху-вниз
-		
+		std::stack<TreeNode*> nodeStack;
+		nodeStack.push(m_bufferNode);
+
+		while (!nodeStack.empty())
+		{
+			TreeNode* tempNode = nodeStack.top();
+			nodeStack.pop();
+			tempNode->level = tempNode->parent->level + 1;
+			for (auto& childNode : tempNode->children)
+			{
+				nodeStack.push(childNode);
+			}
+		}
 	}
 
 	void PasteAfterCut()
 	{
-		// Обход сверху вниз (для изменения уровней)
-		// Уровень отсчитывать относительно места вставки
-		// Сбросить m_isCutMode и n_bufferNode
-
 		m_currentNode->children.push_back(m_bufferNode);
 		m_bufferNode->parent->RemoveChild(m_bufferNode->data);
 		m_bufferNode->parent = m_currentNode;
 		
-		size_t currentLevel = m_currentNode->level;
+		std::stack<TreeNode*> nodeStack;
+		nodeStack.push(m_bufferNode);
 
-
+		while (!nodeStack.empty())
+		{
+			TreeNode* tempNode = nodeStack.top();
+			nodeStack.pop();
+			tempNode->level = tempNode->parent->level + 1;
+			for (auto& childNode : tempNode->children)
+			{
+				nodeStack.push(childNode);
+			}
+		}
+			
+		
 		m_isCutMode = false;
+		m_bufferNode = nullptr;
 	}
 };
