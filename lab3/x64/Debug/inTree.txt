@@ -1,0 +1,9 @@
+root
+.C
+..System
+..users
+...tahir
+...sudo
+...general
+...reboot.exe
+.D

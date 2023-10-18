@@ -8,30 +8,58 @@
 class CFileTree
 {
 public:
-	CFileTree(std::string const& initValue)
-		: m_root(new TreeNode( initValue, 0, nullptr, {} ))
+	CFileTree(std::istream& input)
+		: m_root(nullptr)
 		, m_currentNode(m_root)
-	{}
-
-	void LoadTree(std::istream const& input)
 	{
-		/*
-			root
-			.subFolder
-			..subsubFolder
-			...file.gpt
-			..file1.html
-			..file2.cpp
-			..subsubFolder2
-			...aFile.txt
-			..file4.tsx
-			.subFolder2
-		*/
+		LoadTree(input);
+	}
+
+	void LoadTree(std::istream& input)
+	{
+		std::string line;
+		if (!std::getline(input, line))
+		{
+			throw std::invalid_argument("No root found in file");
+		}
+		m_root = new TreeNode(line, 0, nullptr, {});
+		m_currentNode = m_root;
+		TreeNode* tempNode = m_currentNode;
+		while (std::getline(input, line))
+		{
+			int level = 0;
+			while (line[level] == '.')
+			{
+				level++;
+				line = line.substr(level, line.length());
+			}
+			if (level > tempNode->level)
+			{
+				if (level > tempNode->level + 1)
+				{
+					tempNode = tempNode->children[tempNode->children.size() - 1];
+				}
+				tempNode->AddChild(line);
+			}
+			else if (level < tempNode->level)
+			{
+				while (tempNode->level >= level)
+				{
+					tempNode = tempNode->parent;
+				}
+				tempNode->AddChild(line);
+			}
+			else if (level == tempNode->level)
+			{
+				tempNode = tempNode->parent;
+				tempNode->AddChild(line);
+			}
+		}
 	}
 
 	void SaveTree(std::ostream const& output) const
 	{
-		// Same, filtered already by uploading order
+		// Обход дерева сверху вниз
 	}
 
 	void AddChild(std::string const& data)
