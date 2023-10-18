@@ -32,8 +32,8 @@ public:
 			while (line[level] == '.')
 			{
 				level++;
-				line = line.substr(level, line.length());
 			}
+			line = line.substr(level, line.length());
 			if (level > tempNode->level)
 			{
 				if (level > tempNode->level + 1)
@@ -58,9 +58,23 @@ public:
 		}
 	}
 
-	void SaveTree(std::ostream const& output) const
+	void SaveTree(std::ostream& output) const
 	{
-		// Обход дерева сверху вниз
+		output << m_root->data;
+		std::stack<TreeNode*> nodeStack;
+		nodeStack.push(m_root);
+
+		while (!nodeStack.empty())
+		{
+			TreeNode* tempNode = nodeStack.top();
+			nodeStack.pop();
+			for (size_t i = 0; i < tempNode->level; i++) output << '.';
+			output << tempNode->data << std::endl;
+			for (auto& childNode : tempNode->children)
+			{
+				nodeStack.push(childNode);
+			}
+		}
 	}
 
 	void AddChild(std::string const& data)
@@ -103,10 +117,11 @@ public:
 		}
 	}
 
-	std::vector<std::string> GetFilePath() const
+	std::vector<std::string> GetAllParents() const
 	{
 		TreeNode* nodeToNav = m_currentNode;
 		std::vector<std::string> result;
+		result.push_back(m_currentNode->data);
 		while (nodeToNav->parent != nullptr)
 		{
 			nodeToNav = nodeToNav->parent;
@@ -200,22 +215,12 @@ private:
 			return nullptr;
 		}
 
-		void AddChild(std::string const& name)
+		TreeNode* AddChild(std::string const& name)
 		{
-			if (level == std::numeric_limits<size_t>::infinity())
-			{
-				return;
-			}
-			children.push_back
-			(
-				new TreeNode
-				(
-					name,
-					0,
-					nullptr,
-					{}
-				)
-			);
+			TreeNode* newTreeNode = new TreeNode(name, level + 1, this, {});
+			children.push_back(newTreeNode);
+
+			return newTreeNode;
 		}
 
 		std::string data;
@@ -243,14 +248,15 @@ private:
 	{
 		std::stack<TreeNode*> nodeStack;
 		nodeStack.push(m_bufferNode);
+		TreeNode* tempNode = m_currentNode->AddChild(m_bufferNode->data);
 
 		while (!nodeStack.empty())
 		{
-			TreeNode* tempNode = nodeStack.top();
+			TreeNode* nodeToCopyChildren = nodeStack.top();
 			nodeStack.pop();
-			tempNode->level = tempNode->parent->level + 1;
-			for (auto& childNode : tempNode->children)
+			for (auto& childNode : nodeStack.top()->children)
 			{
+				tempNode->AddChild(childNode->data);
 				nodeStack.push(childNode);
 			}
 		}

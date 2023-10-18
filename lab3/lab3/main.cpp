@@ -5,6 +5,9 @@
 #include <optional>
 #include "CFileTree.h"
 
+#include <stdio.h>
+#include <conio.h>
+
 /*
     ПС-22
     Сафаров Тахир Маратович
@@ -28,8 +31,23 @@ namespace
 {
     using namespace std;
 
-    const std::string HELP_INFO = "Exit - [esc] | Open - [enter] | Up - [backspase] | Create - N | Delete - [delete] | Rename - R | Delete - D | Copy - C | Cut - X | Paste - V";
+    const std::string HELP_INFO = "Exit - [esc] | Open - [enter] | Back - [backspase] | Create - N | Delete - [delete] | Rename - R | Copy - C | Cut - X | Paste - V";
     const std::string TAB = "    ";
+
+    enum class CommandsCodes : int
+    {
+        Exit = 27,
+        Open = 13,
+        Back = 8,
+        Create = 110,
+        Delete = 83, // TODO: узнать
+        Rename = 114,
+        Copy = 99,
+        Cut = 120,
+        Paste = 118,
+        Up = 72,
+        Down = 80,
+    };
 
     size_t selectedItemIndex = 0;
 
@@ -41,10 +59,10 @@ namespace
 
     string Implode(std::vector<std::string> const& vector, char separator)
     {
-        string result = vector[0];
-        for (auto translation = vector.begin() + 1; translation < vector.end(); translation++)
+        string result;
+        for (auto word = vector.rbegin(); word != vector.rend(); word++)
         {
-            result = result + separator + *translation;
+            result = result + *word + separator;
         }
 
         return result;
@@ -66,14 +84,74 @@ namespace
 
     void DisplayData(CFileTree const& tree)
     {
-        std::vector<std::string> allParantFolders = tree.GetFilePath();
-        std::string path = Implode(allParantFolders, '/');
+        std::vector<std::string> allParentsFolders = tree.GetAllParents();
+        std::string path = Implode(allParentsFolders, '/');
         std::vector<std::string> children = tree.GetChildren();
-        cout << HELP_INFO << endl << "-----------------------------------------------------" << endl
-            << "path: " << path << endl;
-        for (auto& child : children)
+        cout << HELP_INFO << endl << "--------------------------------------------------------------------------------------------------------------------------------------------" << endl
+            << "path: " << path << endl << endl;
+        for (size_t i = 0; i < children.size(); i++)
         {
-            cout << TAB << "./" << child;
+            if (i == selectedItemIndex)
+            {
+                cout << " -> ";
+            }
+            else
+            {
+                cout << TAB;
+            }
+            cout << children[i] << endl;
+        }
+    }
+
+    void HandleCommand(CFileTree& tree, bool& isWorking)
+    {
+        CommandsCodes pressedKey = static_cast<CommandsCodes>(_getch());
+        std::string selectedChildName = tree.GetChildren()[selectedItemIndex];
+        switch (pressedKey)
+        {
+        case CommandsCodes::Exit:
+            isWorking = false;
+            break;
+        case CommandsCodes::Open:
+        {
+            tree.GoDown(selectedChildName);
+            break;
+        }
+        case CommandsCodes::Back:
+            tree.GoUp();
+            break;
+        case CommandsCodes::Create:
+        {
+            std::string name;
+            cout << "Now enter file name and press Enter" << endl << "Caution! You will not see file name until it created";
+            auto ch = _getch();
+            while (ch != 13)
+            {
+                name += ch;
+                ch = _getch();
+            }
+            tree.AddChild(name);
+            break;
+        }
+        case CommandsCodes::Delete:
+            break;
+        case CommandsCodes::Rename:
+            break;
+        case CommandsCodes::Copy:
+            cout << "copy";
+            break;
+        case CommandsCodes::Cut:
+            break;
+        case CommandsCodes::Paste:
+            break;
+        case CommandsCodes::Up:
+            if (selectedItemIndex > 0) selectedItemIndex--;
+            break;
+        case CommandsCodes::Down:
+            selectedItemIndex++;
+            break;
+        default:
+            break;
         }
     }
 }
@@ -104,6 +182,17 @@ int main(int argc, char* argv[])
     {
         system("CLS");
         DisplayData(tree);
+        HandleCommand(tree, isWorking);
+        /*std::string str;
+        while (true)
+        {
+            printf("Press any key\n");
+            while (!_kbhit());
+            auto ch = _getch();
+            printf("\n Key kod - %d\n", ch);
+            str.push_back(ch);
+            cout << str << endl;
+        }*/
     }
 
     tree.SaveTree(output);
@@ -113,13 +202,6 @@ int main(int argc, char* argv[])
         cout << "Failed to work with file" << endl;
         return EXIT_FAILURE;
     }
-
-    cout << "Hello" << flush;
-    string test("Bye");
-    Sleep(1000);
-    system("CLS");
-    Sleep(1000);
-    cout << test;
 
     return EXIT_SUCCESS;
 }
