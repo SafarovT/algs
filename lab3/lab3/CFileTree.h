@@ -9,30 +9,58 @@
 class CFileTree
 {
 public:
-	CFileTree(std::string const& initValue)
-		: m_root(new TreeNode( initValue, 0, nullptr, {} ))
+	CFileTree(std::istream& input)
+		: m_root(nullptr)
 		, m_currentNode(m_root)
-	{}
-
-	void LoadTree(std::istream const& input)
 	{
-		/*
-			root
-			.subFolder
-			..subsubFolder
-			...file.gpt
-			..file1.html
-			..file2.cpp
-			..subsubFolder2
-			...aFile.txt
-			..file4.tsx
-			.subFolder2
-		*/
+		LoadTree(input);
+	}
+
+	void LoadTree(std::istream& input)
+	{
+		std::string line;
+		if (!std::getline(input, line))
+		{
+			throw std::invalid_argument("No root found in file");
+		}
+		m_root = new TreeNode(line, 0, nullptr, {});
+		m_currentNode = m_root;
+		TreeNode* tempNode = m_currentNode;
+		while (std::getline(input, line))
+		{
+			int level = 0;
+			while (line[level] == '.')
+			{
+				level++;
+				line = line.substr(level, line.length());
+			}
+			if (level > tempNode->level)
+			{
+				if (level > tempNode->level + 1)
+				{
+					tempNode = tempNode->children[tempNode->children.size() - 1];
+				}
+				tempNode->AddChild(line);
+			}
+			else if (level < tempNode->level)
+			{
+				while (tempNode->level >= level)
+				{
+					tempNode = tempNode->parent;
+				}
+				tempNode->AddChild(line);
+			}
+			else if (level == tempNode->level)
+			{
+				tempNode = tempNode->parent;
+				tempNode->AddChild(line);
+			}
+		}
 	}
 
 	void SaveTree(std::ostream const& output) const
 	{
-		// Same, filtered already by uploading order
+		// Обход дерева сверху вниз
 	}
 
 	void AddChild(std::string const& data)
@@ -140,9 +168,13 @@ public:
 		}
 	}
 
-	void DeleteItem()
+	void DeleteItem(std::string const& name)
 	{
-		// Обход снизу вверх
+		TreeNode* foundNode = m_currentNode->FindChild(name);
+		if (foundNode != nullptr)
+		{
+			DeleteItem(foundNode);
+		}
 	}
 
 private:
@@ -166,16 +198,6 @@ private:
 				}
 			}
 			return nullptr;
-		}
-
-		void RemoveChild(std::string const& childData)
-		{
-			auto findByData = [&childData](TreeNode* child)
-			{
-				return child->data == childData;
-			};
-
-			std::erase_if(children, findByData);
 		}
 
 		void AddChild(std::string const& name)
@@ -207,6 +229,16 @@ private:
 	TreeNode* m_bufferNode = nullptr;
 	bool m_isCutMode = false;
 
+	void DeleteItem(TreeNode* node)
+	{
+		for (auto& childNode : node->children)
+		{
+			DeleteItem(childNode);
+		}
+
+		delete node;
+	}
+
 	void PasteAfterCopy()
 	{
 		std::stack<TreeNode*> nodeStack;
@@ -227,7 +259,14 @@ private:
 	void PasteAfterCut()
 	{
 		m_currentNode->children.push_back(m_bufferNode);
-		m_bufferNode->parent->RemoveChild(m_bufferNode->data);
+
+		std::string bufferNodeData = m_bufferNode->data;
+		auto findByData = [&bufferNodeData](TreeNode* child)
+		{
+			return child->data == bufferNodeData;
+		};
+		std::erase_if(m_bufferNode->parent->children, findByData);
+
 		m_bufferNode->parent = m_currentNode;
 		
 		std::stack<TreeNode*> nodeStack;
