@@ -135,9 +135,13 @@ public:
 		}
 	}
 
-	void DeleteItem()
+	void DeleteItem(std::string const& name)
 	{
-		// Обход снизу вверх
+		TreeNode* foundNode = m_currentNode->FindChild(name);
+		if (foundNode != nullptr)
+		{
+			DeleteItem(foundNode);
+		}
 	}
 
 private:
@@ -161,16 +165,6 @@ private:
 				}
 			}
 			return nullptr;
-		}
-
-		void RemoveChild(std::string const& childData)
-		{
-			auto findByData = [&childData](TreeNode* child)
-			{
-				return child->data == childData;
-			};
-
-			std::erase_if(children, findByData);
 		}
 
 		void AddChild(std::string const& name)
@@ -202,10 +196,20 @@ private:
 	TreeNode* m_bufferNode = nullptr;
 	bool m_isCutMode = false;
 
+	void DeleteItem(TreeNode* node)
+	{
+		for (auto& childNode : node->children)
+		{
+			DeleteItem(childNode);
+		}
+
+		delete node;
+	}
+
 	void PasteAfterCopy()
 	{
-		// Обход сверху-вниз
-		
+		TreeNode* tempNode = m_currentNode;
+
 	}
 
 	void PasteAfterCut()
@@ -215,7 +219,14 @@ private:
 		// Сбросить m_isCutMode и n_bufferNode
 
 		m_currentNode->children.push_back(m_bufferNode);
-		m_bufferNode->parent->RemoveChild(m_bufferNode->data);
+
+		std::string bufferNodeData = m_bufferNode->data;
+		auto findByData = [&bufferNodeData](TreeNode* child)
+		{
+			return child->data == bufferNodeData;
+		};
+		std::erase_if(m_bufferNode->parent->children, findByData);
+
 		m_bufferNode->parent = m_currentNode;
 		
 		size_t currentLevel = m_currentNode->level;
