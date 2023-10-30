@@ -60,7 +60,6 @@ public:
 
 	void SaveTree(std::ostream& output) const
 	{
-		output << m_root->data;
 		std::stack<TreeNode*> nodeStack;
 		nodeStack.push(m_root);
 
@@ -188,6 +187,7 @@ public:
 		TreeNode* foundNode = m_currentNode->FindChild(name);
 		if (foundNode != nullptr)
 		{
+			std::erase(m_currentNode->children, foundNode);
 			DeleteItem(foundNode);
 		}
 	}
@@ -240,7 +240,6 @@ private:
 		{
 			DeleteItem(childNode);
 		}
-
 		delete node;
 	}
 
@@ -248,13 +247,18 @@ private:
 	{
 		std::stack<TreeNode*> nodeStack;
 		nodeStack.push(m_bufferNode);
-		TreeNode* tempNode = m_currentNode->AddChild(m_bufferNode->data);
+		std::string newNodeData = m_bufferNode->data;
+		if (m_currentNode->FindChild(newNodeData) != nullptr)
+		{
+			newNodeData += "_copy";
+		}
+		TreeNode* tempNode = m_currentNode->AddChild(newNodeData);
 
 		while (!nodeStack.empty())
 		{
 			TreeNode* nodeToCopyChildren = nodeStack.top();
 			nodeStack.pop();
-			for (auto& childNode : nodeStack.top()->children)
+			for (auto& childNode : nodeToCopyChildren->children)
 			{
 				tempNode->AddChild(childNode->data);
 				nodeStack.push(childNode);
@@ -264,6 +268,10 @@ private:
 
 	void PasteAfterCut()
 	{
+		if (m_currentNode->FindChild(m_bufferNode->data) != nullptr)
+		{
+			m_bufferNode->data += "_new";
+		}
 		m_currentNode->children.push_back(m_bufferNode);
 
 		std::string bufferNodeData = m_bufferNode->data;
@@ -288,7 +296,6 @@ private:
 				nodeStack.push(childNode);
 			}
 		}
-			
 		
 		m_isCutMode = false;
 		m_bufferNode = nullptr;

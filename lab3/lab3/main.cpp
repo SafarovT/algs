@@ -4,7 +4,6 @@
 #include <Windows.h>
 #include <optional>
 #include "CFileTree.h"
-
 #include <stdio.h>
 #include <conio.h>
 
@@ -40,7 +39,7 @@ namespace
         Open = 13,
         Back = 8,
         Create = 110,
-        Delete = 83, // TODO: узнать
+        Delete = 83,
         Rename = 114,
         Copy = 99,
         Cut = 120,
@@ -82,11 +81,13 @@ namespace
         return args;
     };
 
-    void DisplayData(CFileTree const& tree)
+    void DisplayData(CFileTree const& tree, std::string const& additionalInfo)
     {
+        system("CLS");
         std::vector<std::string> allParentsFolders = tree.GetAllParents();
         std::string path = Implode(allParentsFolders, '/');
         std::vector<std::string> children = tree.GetChildren();
+        if (selectedItemIndex > children.size() - 1) selectedItemIndex = 0;
         cout << HELP_INFO << endl << "--------------------------------------------------------------------------------------------------------------------------------------------" << endl
             << "path: " << path << endl << endl;
         for (size_t i = 0; i < children.size(); i++)
@@ -101,12 +102,21 @@ namespace
             }
             cout << children[i] << endl;
         }
+        cout << TAB << additionalInfo << endl;
+    }
+
+    void DisplayData(CFileTree const& tree)
+    {
+        DisplayData(tree, "");
     }
 
     void HandleCommand(CFileTree& tree, bool& isWorking)
     {
         CommandsCodes pressedKey = static_cast<CommandsCodes>(_getch());
-        std::string selectedChildName = tree.GetChildren()[selectedItemIndex];
+        std::vector<std::string> files = tree.GetChildren();
+        size_t filesAmount = files.size();
+        std::string selectedChildName;
+        if (filesAmount > 0) selectedChildName = files[selectedItemIndex];
         switch (pressedKey)
         {
         case CommandsCodes::Exit:
@@ -123,32 +133,63 @@ namespace
         case CommandsCodes::Create:
         {
             std::string name;
-            cout << "Now enter file name and press Enter" << endl << "Caution! You will not see file name until it created";
+            DisplayData(tree, "[NEW] _\n  Press enter to submit");
+
             auto ch = _getch();
             while (ch != 13)
             {
-                name += ch;
+                if (ch == 8)
+                {
+                    if (name.size() != 0) name.pop_back();
+                }
+                else name += ch;
+                DisplayData(tree, "[NEW] " + name + "\n  Press enter to submit");
                 ch = _getch();
             }
-            tree.AddChild(name);
+            if (name.size() != 0)
+            {
+                tree.AddChild(name);
+            }
             break;
         }
         case CommandsCodes::Delete:
+            tree.DeleteItem(selectedChildName);
             break;
         case CommandsCodes::Rename:
+        {
+            std::string newName;
+            DisplayData(tree, "\n  " + selectedChildName + " --[RENAME]-> _");
+            auto ch = _getch();
+            while (ch != 13)
+            {
+                if (ch == 8)
+                {
+                    if (newName.size() != 0) newName.pop_back();
+                }
+                else newName += ch;
+                DisplayData(tree, "\n  " + selectedChildName + " --[RENAME]-> " + newName);
+                ch = _getch();
+            }
+            if (newName.size() != 0)
+            {
+                tree.Rename(selectedChildName, newName);
+            }
             break;
+        }
         case CommandsCodes::Copy:
-            cout << "copy";
+            tree.CopyItem(selectedChildName);
             break;
         case CommandsCodes::Cut:
+            tree.CutItem(selectedChildName);
             break;
         case CommandsCodes::Paste:
+            tree.PasteItem();
             break;
         case CommandsCodes::Up:
             if (selectedItemIndex > 0) selectedItemIndex--;
             break;
         case CommandsCodes::Down:
-            selectedItemIndex++;
+            if (selectedItemIndex < filesAmount - 1) selectedItemIndex++;
             break;
         default:
             break;
@@ -166,8 +207,7 @@ int main(int argc, char* argv[])
 
     ifstream input;
     input.open(args->inputFileName);
-    ofstream output;
-    output.open(args->outputFileName);
+    ofstream output(args->outputFileName);
 
     if (!input.is_open() || !output.is_open())
     {
@@ -180,22 +220,11 @@ int main(int argc, char* argv[])
 
     while (isWorking)
     {
-        system("CLS");
         DisplayData(tree);
         HandleCommand(tree, isWorking);
-        /*std::string str;
-        while (true)
-        {
-            printf("Press any key\n");
-            while (!_kbhit());
-            auto ch = _getch();
-            printf("\n Key kod - %d\n", ch);
-            str.push_back(ch);
-            cout << str << endl;
-        }*/
     }
-
     tree.SaveTree(output);
+    output.close();
 
     if (input.bad() || !output.flush())
     {

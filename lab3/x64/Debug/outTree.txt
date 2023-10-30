@@ -1,0 +1,9 @@
+root
+.D
+..tahirka_copy
+.C
+..users
+...reboot.exe
+...general
+...sudo
+..gtgtgt
