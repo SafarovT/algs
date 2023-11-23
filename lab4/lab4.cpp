@@ -34,7 +34,7 @@ namespace
         string outputFileName;
     };
 
-    struct VertexData
+    struct VertexDejkstraData
     {
         int vertex;
         int parent;
@@ -42,11 +42,13 @@ namespace
         bool final;
     };
 
-    struct VertexesData
+    struct VertexData
     {
-        VertexData first;
-        VertexData second;
+        VertexDejkstraData first;
+        VertexDejkstraData second;
     };
+
+    using VertexesData = vector<VertexData>;
 
     size_t vertexesCount = 0;
 
@@ -69,9 +71,11 @@ namespace
         Graph graph;
         input >> vertexesCount;
 
+        graph.reserve(vertexesCount);
         for (int i = 0; i < vertexesCount; i++)
         {
             graph.emplace_back();
+            graph.reserve(vertexesCount);
             for (int j = 0; j < vertexesCount; j++)
             {
                 graph[i].emplace_back(0);
@@ -110,7 +114,14 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    Graph graph = ParseGraph(input);;
+    Graph graph = ParseGraph(input);
+
+    VertexesData tableRow;
+    tableRow.resize(vertexesCount);
+    for (size_t i = 0; i < vertexesCount; i++)
+    {
+        tableRow.emplace_back({ {}, {} })
+    }
 
     return EXIT_SUCCESS;
 }
