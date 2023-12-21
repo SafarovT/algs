@@ -50,6 +50,7 @@ namespace
 
     using VertexesData = vector<VertexData>;
 
+    const int MAX_PATH = std::numeric_limits<int>::max();
     size_t vertexesCount = 0;
 
     optional<Args> ParseArgs(const int argc, char* argv[])
@@ -75,7 +76,7 @@ namespace
         for (int i = 0; i < vertexesCount; i++)
         {
             graph.emplace_back();
-            graph.reserve(vertexesCount);
+            graph[i].reserve(vertexesCount);
             for (int j = 0; j < vertexesCount; j++)
             {
                 graph[i].emplace_back(0);
@@ -94,6 +95,130 @@ namespace
             input >> b;
             input >> w;
             graph[a - 1][b - 1] = w;
+        }
+
+        return graph;
+    }
+
+    bool CheckFinals(VertexesData& data)
+    {
+        for (auto& dataItem : data)
+        {
+            if (!dataItem.first.final || !dataItem.second.final)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    VertexesData GetDefaultTableRow()
+    {
+        VertexesData tableRow;
+        tableRow.reserve(vertexesCount);
+        tableRow.emplace_back(VertexData({
+            {0, 0, 0, true},
+            {0, 0, MAX_PATH, false},
+            }));
+        for (int i = 1; i < vertexesCount; i++)
+        {
+            tableRow.emplace_back(VertexData({
+                {i, 0, MAX_PATH, false},
+                {i, 0, MAX_PATH, false},
+                }));
+        }
+        return tableRow;
+    }
+
+    void FindNextVertexIndex(size_t& currentVertexIndex, bool& isLookingSecond, bool& isLookingEnded, VertexesData& tableRow)
+    {
+        VertexDejkstraData defaultMin = { 0, 0, MAX_PATH, false };
+        VertexDejkstraData* minPtr = &defaultMin;
+        for (auto& data : tableRow)
+        {
+            if (!data.first.final && data.first.value < minPtr->value)
+            {
+                minPtr = &data.first;
+                isLookingSecond = false;
+            }
+            if (!data.second.final && data.second.value < minPtr->value)
+            {
+                minPtr = &data.second;
+                isLookingSecond = true;
+            }
+        }
+
+        if (minPtr->value != MAX_PATH)
+        {
+            minPtr->final = true;
+            currentVertexIndex = minPtr->vertex;
+        }
+        else
+        {
+            isLookingEnded = true;
+        }
+    }
+
+    int GetFullEdgeValue(bool isLookingSecond, int value, VertexDejkstraData& first, VertexDejkstraData& second)
+    {
+        if (!isLookingSecond)
+            return first.value + value;
+        else
+            return second.value + value;
+    }
+
+    void ComparePaths(VertexData* dist, int currentVertexIndex, int fullValue)
+    {
+        if (!dist->first.final && fullValue < dist->first.value)
+        {
+            dist->second = dist->first;
+            dist->first.value = fullValue;
+            dist->first.parent = currentVertexIndex;
+        }
+        else if (!dist->second.final && fullValue < dist->second.value)
+        {
+            dist->second.value = fullValue;
+            dist->second.parent = currentVertexIndex;
+        }
+    }
+
+    void FindPaths(Graph& graph, VertexesData& tableRow)
+    {
+        size_t currentVertexIndex = 0;
+        bool isLookingSecond = false;
+        bool isLookingEnded = false;
+        while (!CheckFinals(tableRow) && !isLookingEnded)
+        {
+            for (int i = 0; i < vertexesCount; i++)
+            {
+                VertexData* dist = &tableRow[i];
+                VertexData* current = &tableRow[currentVertexIndex];
+                int value = graph[currentVertexIndex][i];
+                if (value == 0)
+                    continue;
+
+                int fullValue = GetFullEdgeValue(isLookingSecond, value, current->first, current->second);
+                ComparePaths(dist, currentVertexIndex, fullValue);
+            }
+
+            FindNextVertexIndex(currentVertexIndex, isLookingSecond, isLookingEnded, tableRow);
+        }
+    }
+
+    void PrintResultDistanations(VertexesData& tableRow, ofstream& output)
+    {
+        for (int i = 1; i < vertexesCount; i++)
+        {
+            string value = "Not found";
+            if (tableRow[i].first.vertex == 0)
+            {
+                continue;
+            }
+            if (tableRow[i].second.value != MAX_PATH)
+            {
+                value = to_string(tableRow[i].second.value);
+            }
+            output << "Dist(" << tableRow[i].second.vertex + 1 << ") = " << tableRow[i].second.value << endl;
         }
     }
 }
@@ -115,12 +240,15 @@ int main(int argc, char* argv[])
     }
 
     Graph graph = ParseGraph(input);
+    VertexesData tableRow = GetDefaultTableRow();
 
-    VertexesData tableRow;
-    tableRow.resize(vertexesCount);
-    for (size_t i = 0; i < vertexesCount; i++)
+    FindPaths(graph, tableRow);
+    PrintResultDistanations(tableRow, output);
+
+    if (!output.flush())
     {
-        tableRow.emplace_back({ {}, {} })
+        cout << "Work with out file failed" << endl;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
